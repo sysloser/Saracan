@@ -3,6 +3,8 @@
  1.1 单个IP参数 -i
  1.2 一段IP参数 -r
  1.3 一个子网参数 -n
+ 1.4 一个文件参数 -f
+ 1.5 一个域名参数 -n
 2.对输入的IP进行ping探测
 3.探测成功，返回"IP可达"
 4.探测失败，返回"IP不可达"
@@ -19,6 +21,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -26,14 +29,16 @@ import (
 
 var ipsolo *string //挂载一个IP
 var rangeip *string  //挂载一段IP
-var netip *string //挂在一个IP子网
-var file *string
+var netip *string //挂载一个IP子网
+var file *string //挂载一个文件
+var name *string //挂载一个域名
 
 func init() {
 	ipsolo = flag.String("i", "", "输入单个IP地址，如：192.168.1.1")
 	rangeip = flag.String("r", "", "输入一段IP地址，如：192.168.1.1-192.168.1.2")
 	netip = flag.String("n", "", "输入一个IP子网，如：192.168.1.0/24")
 	file = flag.String("f","","附上一个包含IP地址的文本文件")
+	name = flag.String("d","","输入一个域名")
 }
 
 //逐行读取文件
@@ -77,6 +82,11 @@ func backtoIP4(ipInt int64) string {
 //拆分ip段，形成IP数组
 func Splitiprange(s string)[]string{
 	var iprange []string
+	pattern,_:=regexp.MatchString("-",s)
+	if !pattern {
+		fmt.Println("请按照格式输入一个IP段")
+		os.Exit(1)
+	}
 	a:=strings.Split(s,"-")
 	ip1:=ip2Long(strings.TrimSpace(a[0]))
 	ip2:=ip2Long(strings.TrimSpace(a[1]))
@@ -134,9 +144,11 @@ func pingcheck(ips []string){
 	}
 }
 
+
+
 func main(){
 	flag.Parse()
-	if *ipsolo==""&&*rangeip==""&&*netip==""&&*file==""{
+	if *ipsolo==""&&*rangeip==""&&*netip==""&&*file==""&&*name==""{
 		fmt.Println("Please follow the below instructions:")
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -165,5 +177,14 @@ func main(){
 	if *file!=""{
 		a:=Readfile(*file)
 		pingcheck(a)
+	}
+	if *name!=""{
+		result,err,_:=ping.Ping(*name,2)
+		if err != nil{
+			fmt.Printf("%v 不可达 \n",*ipsolo)
+		}
+		if result {
+			fmt.Printf("%v 可达 \n",*ipsolo)
+		}
 	}
 }
